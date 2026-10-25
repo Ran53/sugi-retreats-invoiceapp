@@ -8,8 +8,9 @@ import ClientsPage from './pages/ClientsPage'
 import ItemsPage from './pages/ItemsPage'
 import SettingsPage from './pages/SettingsPage'
 import ExpensesPage from './pages/ExpensesPage'
+import ReportsPage from './pages/ReportsPage'
 
-type Page = 'dashboard' | 'invoices' | 'create' | 'edit' | 'clients' | 'items' | 'expenses' | 'settings'
+type Page = 'dashboard' | 'invoices' | 'create' | 'edit' | 'clients' | 'items' | 'expenses' | 'reports' | 'settings'
 
 const INVOICE_GROUP: Page[] = ['invoices', 'create', 'edit', 'clients', 'items']
 
@@ -98,6 +99,7 @@ export default function App() {
       )}
 
       <NavBtn id="expenses" label="Expenses" icon="💸" />
+      <NavBtn id="reports" label="Reports" icon="📈" />
       <NavBtn id="settings" label="Settings" icon="⚙️" />
     </nav>
   )
@@ -109,6 +111,7 @@ export default function App() {
     { id: 'clients', label: 'Clients' },
     { id: 'items', label: 'Items' },
     { id: 'expenses', label: 'Expenses' },
+    { id: 'reports', label: 'Reports' },
     { id: 'settings', label: 'Settings' },
   ]
 
@@ -177,6 +180,7 @@ export default function App() {
         {page === 'clients' && <ClientsPage clients={clients} onChange={refresh} />}
         {page === 'items' && <ItemsPage items={items} onChange={refresh} />}
         {page === 'expenses' && <ExpensesPage onChange={refresh} />}
+        {page === 'reports' && <ReportsPage settings={settings} invoices={invoices} onNavigate={navigate} />}
         {page === 'settings' && <SettingsPage settings={settings} onChange={refresh} />}
       </main>
     </div>
