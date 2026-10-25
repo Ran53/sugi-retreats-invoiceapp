@@ -381,18 +381,18 @@ export default function SettingsPage({ settings, onChange }: Props) {
           <div className="card mb-4">
             <h2 className="mb-4">Colors</h2>
             <div className="form-grid cols-2">
-              {[
+              {([
                 ['primaryColor', 'Primary', true],
                 ['accentColor', 'Accent', false],
                 ['tableHeaderBg', 'Table Header', false],
                 ['mutedColor', 'Muted Text', false],
-              ].map(([key, label, sync]) => (
+              ] as Array<[keyof Theme, string, boolean]>).map(([key, label, sync]) => (
                 <div className="field" key={key as string}>
                   <label>{label as string}</label>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input
                       type="color"
-                      value={(theme as any)[key]}
+                      value={theme[key] as string}
                       onChange={e => {
                         const v = e.target.value
                         if (sync) setTheme({ ...theme, primaryColor: v, tableHeaderBg: v })
@@ -400,7 +400,7 @@ export default function SettingsPage({ settings, onChange }: Props) {
                       }}
                       style={{ width: 48, height: 38, border: 'none', cursor: 'pointer', borderRadius: 8 }}
                     />
-                    <input value={(theme as any)[key]} onChange={e => setTheme({ ...theme, [key as string]: e.target.value })} style={{ flex: 1 }} />
+                    <input value={theme[key] as string} onChange={e => setTheme({ ...theme, [key as string]: e.target.value })} style={{ flex: 1 }} />
                   </div>
                 </div>
               ))}

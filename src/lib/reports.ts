@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx-js-style'
-import type { AppSettings, ExpenseCategory, Invoice } from '../types'
+import type { AppSettings, Expense, ExpenseCategory, Invoice } from '../types'
 
 export type ReportType = 'overview' | 'invoices' | 'expenses' | 'full'
 
@@ -84,7 +84,7 @@ const EXCEL_TEXT = '23302B'
 const EXCEL_MUTED = '64748B'
 const EXCEL_BORDER = 'D9E3DD'
 
-function styleExcelSheet(ws: XLSX.WorkSheet, title: string, subtitle: string, headerRow: number, widths: number[]) {
+function styleExcelSheet(ws: XLSX.WorkSheet, _title: string, _subtitle: string, headerRow: number, widths: number[]) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1')
   const lastCol = range.e.c
   const lastRow = range.e.r
@@ -112,7 +112,7 @@ function styleExcelSheet(ws: XLSX.WorkSheet, title: string, subtitle: string, he
   }
 }
 
-function styleSummarySheet(ws: XLSX.WorkSheet, title: string, subtitle: string) {
+function styleSummarySheet(ws: XLSX.WorkSheet, _title: string, _subtitle: string) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1')
   const lastCol = range.e.c
   ws['!cols'] = [{ wch: 28 }, { wch: 22 }]
@@ -137,6 +137,12 @@ function applyMoneyFormat(ws: XLSX.WorkSheet, columns: number[], startRow: numbe
     const cell = ws[XLSX.utils.encode_cell({ r, c })]
     if (cell && typeof cell.v === 'number') cell.z = '#,##0.00'
   }
+}
+
+function dataSheet<T extends Record<string, unknown>>(rows: T[], fallbackColumns: string[]) {
+  const columns = rows.length ? Object.keys(rows[0]) : fallbackColumns
+  const values = rows.map(row => columns.map(column => row[column]))
+  return XLSX.utils.aoa_to_sheet([[], [], columns, ...values])
 }
 
 function addExcelHeader(ws: XLSX.WorkSheet, title: string, subtitle: string, columns: string[]) {
@@ -176,7 +182,7 @@ export function exportReportExcel(
 
   if (type === 'overview' || type === 'invoices' || type === 'full') {
     const rows = invoiceRows(data)
-    const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true, origin: 'A4' })
+    const ws = dataSheet(rows, ['Invoice #'])
     addExcelHeader(ws, 'Invoices & Income', `${title} · ${period}`, Object.keys(rows[0] || { 'Invoice #': '' }))
     styleExcelSheet(ws, 'Invoices & Income', period, 2, [15, 13, 24, 22, 13, 13, 14, 14, 14, 14, 14, 14])
     applyMoneyFormat(ws, [5, 6, 7, 8, 9], 3)
@@ -185,7 +191,7 @@ export function exportReportExcel(
 
   if (type === 'overview' || type === 'expenses' || type === 'full') {
     const rows = expenseRows(data, categories)
-    const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true, origin: 'A4' })
+    const ws = dataSheet(rows, ['Date'])
     addExcelHeader(ws, 'Expenses', `${title} · ${period}`, Object.keys(rows[0] || { Date: '' }))
     styleExcelSheet(ws, 'Expenses', period, 2, [14, 30, 20, 20, 16, 15, 18, 35])
     applyMoneyFormat(ws, [5], 3)
@@ -197,7 +203,7 @@ export function exportReportExcel(
       ...data.invoices.map(i => ({ Date: i.invoiceDate, Type: 'Income', Reference: i.number, Description: i.clientName, Amount: i.total - i.balanceDue })),
       ...data.expenses.map(e => ({ Date: e.date, Type: 'Expense', Reference: e.reference || '', Description: e.description, Amount: -e.amount })),
     ].sort((a, b) => a.Date.localeCompare(b.Date))
-    const ws = XLSX.utils.json_to_sheet(combined, { skipHeader: true, origin: 'A4' })
+    const ws = dataSheet(combined, ['Date', 'Type', 'Reference', 'Description', 'Amount'])
     addExcelHeader(ws, 'Combined Income + Expense Ledger', `${title} · ${period}`, ['Date', 'Type', 'Reference', 'Description', 'Amount'])
     styleExcelSheet(ws, 'Combined Ledger', period, 2, [14, 14, 18, 36, 16])
     applyMoneyFormat(ws, [4], 3)
@@ -328,7 +334,7 @@ export function exportAllInvoicesExcel(settings: AppSettings, invoices: Invoice[
     Subtotal: i.subTotal, Tax: i.taxAmount, Total: i.total, Collected: i.total - i.balanceDue,
     Balance: i.balanceDue, 'Check-in': i.checkIn || '', 'Check-out': i.checkOut || '',
   }))
-  const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true, origin: 'A4' })
+  const ws = dataSheet(rows, ['Invoice #'])
   addExcelHeader(ws, 'All Invoices', `${title} · ${invoices.length} invoices`, Object.keys(rows[0] || { 'Invoice #': '' }))
   styleExcelSheet(ws, 'All Invoices', `${invoices.length} invoices`, 2, [15, 13, 24, 14, 15, 13, 15, 15, 15, 14, 14])
   applyMoneyFormat(ws, [4, 5, 6, 7, 8], 3)

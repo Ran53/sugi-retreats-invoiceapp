@@ -63,7 +63,6 @@ function save<T>(key: string, value: T) {
 function buildDefaultSettings(business?: BusinessProfile): AppSettings {
   return {
     business: {
-      invoiceTitle: 'TAX INVOICE',
       ...(business || { name: 'SUGI Retreats Farm Stay', address: 'Karnataka', city: 'Mysore', state: 'Karnataka', country: 'India', phone: '+919945513959', email: 'ranjansg3@gmail.com' }),
       invoiceTitle: (business as any)?.invoiceTitle || 'TAX INVOICE',
     },
