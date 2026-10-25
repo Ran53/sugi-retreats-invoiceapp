@@ -1,0 +1,79 @@
+[
+  {
+    "id": "item-stay",
+    "name": "Stay",
+    "description": "Farm stay accommodation per night",
+    "rate": 15000,
+    "unit": "night",
+    "sacCode": "996311",
+    "taxRate": 0,
+    "category": "Stay",
+    "isActive": true
+  },
+  {
+    "id": "item-breakfast",
+    "name": "Breakfast",
+    "description": "Farm fresh breakfast",
+    "rate": 1700,
+    "unit": "meal",
+    "sacCode": "996332",
+    "taxRate": 0,
+    "category": "Food",
+    "isActive": true
+  },
+  {
+    "id": "item-lunch",
+    "name": "Lunch",
+    "description": "Traditional farm lunch",
+    "rate": 2500,
+    "unit": "meal",
+    "sacCode": "996332",
+    "taxRate": 0,
+    "category": "Food",
+    "isActive": true
+  },
+  {
+    "id": "item-dinner",
+    "name": "Dinner",
+    "description": "Farm-to-table dinner",
+    "rate": 2800,
+    "unit": "meal",
+    "sacCode": "996332",
+    "taxRate": 0,
+    "category": "Food",
+    "isActive": true
+  },
+  {
+    "id": "item-bonfire",
+    "name": "Bonfire Experience",
+    "description": "Evening bonfire with snacks",
+    "rate": 2000,
+    "unit": "session",
+    "sacCode": "999799",
+    "taxRate": 0,
+    "category": "Activity",
+    "isActive": true
+  },
+  {
+    "id": "item-farm-tour",
+    "name": "Guided Farm Tour",
+    "description": "Guided tour of the farm and activities",
+    "rate": 1500,
+    "unit": "person",
+    "sacCode": "999799",
+    "taxRate": 0,
+    "category": "Activity",
+    "isActive": true
+  },
+  {
+    "id": "item-extra-guest",
+    "name": "Extra Guest",
+    "description": "Additional adult guest",
+    "rate": 2500,
+    "unit": "night",
+    "sacCode": "996311",
+    "taxRate": 0,
+    "category": "Stay",
+    "isActive": true
+  }
+]
