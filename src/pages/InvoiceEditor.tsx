@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import jsPDF from 'jspdf'
 import type { AppSettings, Client, Item, Invoice, InvoiceItem, Payment, TaxMode } from '../types'
 import {
   getInvoices, upsertInvoice, generateId, formatCurrency, numberToWords,
@@ -193,11 +194,175 @@ export default function InvoiceEditor({ invoiceId, settings, clients, items, onS
     onSave()
   }
 
+  const generateInvoicePdf = async () => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 14
+    const contentWidth = pageWidth - margin * 2
+    const primary = theme.primaryColor || '#166534'
+    const hexToRgb = (hex: string) => {
+      const h = hex.replace('#', '')
+      const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+      return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)] as [number, number, number]
+    }
+    const [r, g, b] = hexToRgb(primary)
+    const money = (value: number) => `INR ${value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const date = (value?: string) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-IN') : ''
+    let y = 16
+
+    doc.setFillColor(r, g, b)
+    doc.rect(0, 0, pageWidth, 8, 'F')
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(20)
+    doc.text(biz.name || 'FarmStay', margin, y + 5)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    if (biz.tagline) doc.text(biz.tagline, margin, y + 11)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.text(biz.invoiceTitle || 'TAX INVOICE', pageWidth - margin, y + 5, { align: 'right' })
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Invoice: ${invoiceNumber}`, pageWidth - margin, y + 11, { align: 'right' })
+    y += 25
+
+    doc.setDrawColor(210, 210, 210)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 8
+
+    const leftLines = [
+      biz.address,
+      [biz.city, biz.state, biz.pincode].filter(Boolean).join(', '),
+      biz.country,
+      sections.showBusinessPhone ? `Phone: ${biz.phone}` : '',
+      sections.showBusinessEmail ? `Email: ${biz.email}` : '',
+      sections.showGstin && biz.gstin ? `GSTIN: ${biz.gstin}` : '',
+    ].filter(Boolean)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('From', margin, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    leftLines.forEach((line, i) => doc.text(String(line), margin, y + 5 + i * 4.5))
+
+    const rightX = pageWidth / 2 + 5
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('Bill To', rightX, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    const clientLines = [
+      clientName,
+      sections.showClientPhone && clientPhone ? `Phone: ${clientPhone}` : '',
+      sections.showClientEmail && clientEmail ? `Email: ${clientEmail}` : '',
+      sections.showClientAddress && clientAddress ? clientAddress : '',
+      sections.showClientGstin && clientGstin ? `GSTIN: ${clientGstin}` : '',
+    ].filter(Boolean)
+    clientLines.forEach((line, i) => doc.text(String(line), rightX, y + 5 + i * 4.5))
+    y += Math.max(leftLines.length, clientLines.length) * 4.5 + 14
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    const meta = [
+      sections.showInvoiceDate ? `Invoice Date: ${date(invoiceDate)}` : '',
+      `Due Date: ${date(dueDate)}`,
+      sections.showCheckIn && checkIn ? `Check-in: ${date(checkIn)}` : '',
+      sections.showCheckOut && checkOut ? `Check-out: ${date(checkOut)}` : '',
+      stayOption ? `Property: ${stayOption}` : '',
+    ].filter(Boolean)
+    meta.forEach((line, i) => doc.text(line, margin + (i % 2) * (contentWidth / 2), y + Math.floor(i / 2) * 5))
+    y += Math.ceil(meta.length / 2) * 5 + 8
+
+    const col = [margin, margin + contentWidth * 0.49, margin + contentWidth * 0.64, margin + contentWidth * 0.79, pageWidth - margin]
+    doc.setFillColor(r, g, b)
+    doc.rect(margin, y, contentWidth, 8, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.text('Description', col[0] + 2, y + 5.3)
+    doc.text('Qty', col[1] + 2, y + 5.3)
+    doc.text('Rate', col[2] + 2, y + 5.3)
+    doc.text('Amount', col[3] + 2, y + 5.3)
+    y += 8
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'normal')
+    lineItems.forEach((it, index) => {
+      if (y > 265) { doc.addPage(); y = 18 }
+      if (index % 2 === 0) { doc.setFillColor(248, 250, 249); doc.rect(margin, y, contentWidth, 8, 'F') }
+      doc.setDrawColor(225, 225, 225)
+      doc.line(margin, y + 8, pageWidth - margin, y + 8)
+      doc.text(String(it.description || ''), col[0] + 2, y + 5.3, { maxWidth: contentWidth * 0.46 })
+      doc.text(String(it.qty), col[1] + 2, y + 5.3)
+      doc.text(money(Number(it.rate)), col[2] + 2, y + 5.3)
+      doc.text(money(Number(it.amount)), col[3] + 2, y + 5.3)
+      y += 8
+    })
+    y += 8
+
+    const summaryX = pageWidth - margin - 72
+    const summaryValueX = pageWidth - margin
+    const summary = [
+      ['Subtotal', money(subTotal)],
+      ...(taxMode === 'cgst_sgst' ? [['CGST', money(cgst)], ['SGST', money(sgst)]] : []),
+      ...(taxMode === 'igst' ? [['IGST', money(igst)]] : []),
+      ['Total', money(total)],
+      ...(paid > 0 ? [['Paid', money(paid)], ['Balance Due', money(balanceDue)]] : []),
+    ]
+    doc.setFontSize(9)
+    summary.forEach(([label, value]) => {
+      const strong = label === 'Total' || label === 'Balance Due'
+      doc.setFont('helvetica', strong ? 'bold' : 'normal')
+      if (strong) doc.setFillColor(245, 247, 246)
+      if (strong) doc.rect(summaryX - 3, y - 4, 75, 7, 'F')
+      doc.text(label, summaryX, y)
+      doc.text(value, summaryValueX, y, { align: 'right' })
+      y += 6
+    })
+
+    if (terms || notes || amountInWords) {
+      y += 8
+      doc.setFont('helvetica', 'bold')
+      doc.text('Additional Information', margin, y)
+      y += 5
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      if (amountInWords) { doc.text(`Amount in words: ${amountInWords}`, margin, y, { maxWidth: contentWidth }); y += 5 }
+      if (terms) { doc.text(`Terms: ${terms}`, margin, y, { maxWidth: contentWidth }); y += 5 }
+      if (notes) doc.text(`Notes: ${notes}`, margin, y, { maxWidth: contentWidth })
+    }
+
+    const blob = doc.output('blob')
+    const filename = `${(biz.name || 'FarmStay').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'FarmStay'}-${invoiceNumber}.pdf`
+    const file = new File([blob], filename, { type: 'application/pdf' })
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ files: [file], title: filename })
+        return
+      }
+    } catch (error) {
+      if ((error as DOMException)?.name === 'AbortError') return
+    }
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   const handlePrint = () => {
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    if (isStandalone) {
+      void generateInvoicePdf()
+      return
+    }
     const prevTitle = document.title
-    // Blank title so browser header doesn't show "FarmStay Invoice Maker"
     document.title = ' '
-    // Small delay so title applies before dialog
     setTimeout(() => {
       window.print()
       setTimeout(() => { document.title = prevTitle }, 500)
